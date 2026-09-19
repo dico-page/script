@@ -60,6 +60,7 @@
         let notifications = Array.from(source.querySelectorAll('.notification-item'));
         let currentCategory = 'all';
         let currentSort = 'newest';
+        let eventSource = null;
         const baseDocumentTitle = document.title.replace(/^\(\d+\+?\)\s*/, '');
 
         function updateDocumentTitle(count) {
@@ -281,7 +282,7 @@
         window.setInterval(renderNotifications, 60000);
 
         if ('EventSource' in window) {
-            const eventSource = new EventSource(root.dataset.streamUrl);
+            eventSource = new EventSource(root.dataset.streamUrl);
             eventSource.addEventListener('notification', (event) => {
                 try {
                     const notification = JSON.parse(event.data);
@@ -301,6 +302,10 @@
                 }
             });
         }
+
+        window.addEventListener('pagehide', () => {
+            eventSource?.close();
+        }, { once: true });
     }
 
     if (document.readyState === 'loading') {
