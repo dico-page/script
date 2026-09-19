@@ -238,6 +238,29 @@
             return item;
         }
 
+        function openNotificationUrl(href) {
+            if (!href || href === '#') return;
+
+            const url = new URL(href, window.location.href);
+            if (url.origin === window.location.origin && typeof window.appNavigate === 'function') {
+                window.appNavigate(url.href);
+                return;
+            }
+
+            window.location.assign(url.href);
+        }
+
+        function applyReadState(notificationId, unreadCount) {
+            notifications.forEach((item) => {
+                if (item.dataset.notificationId !== notificationId) return;
+                item.dataset.isRead = 'true';
+                item.querySelector('.notification-unread-dot')?.remove();
+            });
+
+            setBadge(unreadCount);
+            renderNotifications();
+        }
+
         tabs.forEach((tab) => {
             tab.addEventListener('click', (event) => {
                 event.preventDefault();
@@ -262,6 +285,42 @@
                 sortLabel.textContent = currentSort === 'oldest' ? '오래된순' : '최신순';
                 renderNotifications();
             });
+        });
+
+        groupsElement.addEventListener('click', async (event) => {
+            const item = event.target.closest('.notification-item');
+            if (!item) return;
+
+            const notificationId = item.dataset.notificationId;
+            const href = item.getAttribute('href');
+
+            if (!notificationId || item.dataset.isRead === 'true') {
+                if (href === '#') event.preventDefault();
+                return;
+            }
+
+            event.preventDefault();
+            if (item.dataset.readPending === 'true') return;
+            item.dataset.readPending = 'true';
+
+            try {
+                const response = await fetch(`/api/notifications/${encodeURIComponent(notificationId)}/read`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || '알림을 읽음 처리하지 못했습니다.');
+                }
+
+                applyReadState(notificationId, data.unread_count);
+            } catch (error) {
+                console.error('[알림] 개별 읽음 처리 실패', error);
+            } finally {
+                item.dataset.readPending = 'false';
+                openNotificationUrl(href);
+            }
         });
 
         readAllButton.addEventListener('click', async () => {
