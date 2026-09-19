@@ -61,13 +61,18 @@
         let currentCategory = 'all';
         let currentSort = 'newest';
         let eventSource = null;
-        const baseDocumentTitle = document.title.replace(/^\(\d+\+?\)\s*/, '');
+        let baseDocumentTitle = document.title.replace(/^\(\d+\+?\)\s*/, '');
 
         function updateDocumentTitle(count) {
             const value = Math.max(0, Number(count) || 0);
             const countText = value > 99 ? '99+' : String(value);
             document.title = value > 0 ? `(${countText}) ${baseDocumentTitle}` : baseDocumentTitle;
         }
+
+        window.addEventListener('app:title-change', (event) => {
+            baseDocumentTitle = String(event.detail?.title || document.title).replace(/^\(\d+\+?\)\s*/, '');
+            updateDocumentTitle(badge.dataset.count);
+        });
 
         function parseDate(value) {
             if (!value) return null;
